@@ -56,17 +56,17 @@ N_SHOW             = 40     # trajectories drawn per panel (same across all pane
 PGD_STEPS          = 30     # PGD iterations for adversarial wind
 SEED_EVAL          = 99
 DEVICE             = torch.device("cpu")
-PLOT_PATH          = "compare_wind_policies_strel.png"
-CKPT_STD           = "saved_models/std_no_critic_h10_wind0.05_3000iters.pt"
-CKPT_RARL          = "saved_models/rarl_no_critic_h10_wind0.05_3000iters.pt"
-CKPT_CERT          = "saved_models/cert_no_critic_h10_wind0.05_3000iters.pt"
+PLOT_PATH          = "compare_policies_strel.png"
+CKPT_STD           = "saved_models/std_no_critic_h10_wind0.1.pt"
+CKPT_RARL          = "saved_models/rarl_no_critic_h10_wind0.1.pt"
+CKPT_CERT          = "saved_models/cert_no_critic_h10_wind0.1.pt"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared geometry — pulled from strel_policy_optimization_no_critic so that
 # changing obstacles / goal in that script is automatically reflected here.
 # ─────────────────────────────────────────────────────────────────────────────
 def _load_geometry():
-    from wind_std_strel import PlanningConfig, ThreeObstacleSTRELProblem
+    from strel_policy_optimization_no_critic import PlanningConfig, ThreeObstacleSTRELProblem
     _cfg  = PlanningConfig()
     _prob = ThreeObstacleSTRELProblem(_cfg, torch.device("cpu"))
     return (
@@ -360,13 +360,13 @@ def _get_standard(train_iters: Optional[int] = None,
               obs_dim=2+2+6+3, cfg=dataclasses.asdict(cfg),
               train_time_s=train_time_s)
 
-    return _PolicyWrapper("Standard", pol, cfg, prob.observation,
+    return _PolicyWrapper("PO", pol, cfg, prob.observation,
                           train_time_s=train_time_s)
 
 
 def _get_rarl(train_iters: Optional[int] = None,
               wind_max: Optional[float] = None, load: bool = False) -> _PolicyWrapper:
-    from wind_rarl_strel import (
+    from rarl_no_critic_strel import (
         PlanningConfig, train_rarl, DeterministicPolicy, AdvPolicy,
         ThreeObstacleSTRELProblem)
 
@@ -412,7 +412,7 @@ def _get_rarl(train_iters: Optional[int] = None,
 
 def _get_certified(train_iters: Optional[int] = None,
                    wind_max: Optional[float] = None, load: bool = False) -> _PolicyWrapper:
-    from wind_certified_strel import (
+    from certified_no_critic_strel import (
         PlanningConfig, train_certified_policy, DeterministicPolicy,
         ThreeObstacleSTRELProblem)
 
@@ -447,14 +447,14 @@ def _get_certified(train_iters: Optional[int] = None,
               obs_dim=2+2+6+3, cfg=dataclasses.asdict(cfg),
               train_time_s=train_time_s)
 
-    return _PolicyWrapper("Certified", pol, cfg, prob.observation,
+    return _PolicyWrapper("CRRL", pol, cfg, prob.observation,
                           train_time_s=train_time_s)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Drawing helpers
 # ─────────────────────────────────────────────────────────────────────────────
-_COLORS  = {"Standard": "tab:blue", "RARL": "tab:orange", "Certified": "tab:green"}
+_COLORS  = {"PO": "tab:blue", "RARL": "tab:orange", "CRRL": "tab:green"}
 _COL_VIO = "tab:red"
 _GRID_KW = dict(color="lightgray", linewidth=0.4, linestyle="-", zorder=0)
 
@@ -532,7 +532,7 @@ def _draw_grouped_hist(ax, rho_dict: Dict[str, torch.Tensor], title: str = ""):
 # ─────────────────────────────────────────────────────────────────────────────
 def _parse_args():
     p = argparse.ArgumentParser(
-        description="Compare Standard / RARL / Certified STREL policies.")
+        description="Compare PO / RARL / CRRL STREL policies.")
     p.add_argument("--std-iters",   type=int,   default=None,
                    metavar="N", help="retrain Standard for N iterations")
     p.add_argument("--rarl-iters",  type=int,   default=None,
@@ -556,6 +556,9 @@ def _parse_args():
     p.add_argument("--no-cert-compare", action="store_true",
                    help="skip the IBP/CROWN-IBP/CROWN comparison and the "
                         "wind-fraction sweep (saves time when not needed)")
+    p.add_argument("--load-lb", action="store_true",
+                   help="load cached lower bounds from checkpoint when available "
+                        "(main IBP/CROWN-IBP/CROWN table and CROWN fraction sweep)")
     p.add_argument("--load-sweep", action="store_true",
                    help="load CROWN sweep results from checkpoint instead of "
                         "recomputing (implies --no-cert-compare is NOT set)")
@@ -676,6 +679,7 @@ def main():
     # cert_time[method]             = average wall-clock seconds across policies
     import time as _time
     LIRPA_METHODS = ["IBP", "CROWN-IBP", "CROWN"]
+    CKPT_LB = PLOT_PATH.replace(".png", "_cert_lb.pt")
     if args.no_cert_compare:
         print("\n[--no-cert-compare] Skipping IBP/CROWN-IBP/CROWN comparison "
               "and wind-fraction sweep.")
@@ -684,28 +688,54 @@ def main():
         cert_cp   = {m: {w.name: None for w in wrappers} for m in LIRPA_METHODS}
         any_valid = False
     else:
-        cert_lb   = {}
-        cert_time = {}
-        print("\nComputing certified lower bounds (IBP / CROWN-IBP / CROWN) …")
-        for method in LIRPA_METHODS:
-            cert_lb[method] = {}
-            elapsed_list: List[float] = []
-            print(f"  [{method}]")
-            for w in wrappers:
-                print(f"    {w.name} …", flush=True, end=" ")
-                try:
-                    t0 = _time.perf_counter()
-                    lb = _compute_cert_lb(w.policy, pos_eval, EVAL_WIND_MAX, method)
-                    elapsed = _time.perf_counter() - t0
-                    cert_lb[method][w.name] = lb
-                    elapsed_list.append(elapsed)
-                    print(f"lb̄={float(lb.mean()):+.3f}  sat={float((lb>0).float().mean()):.1%}"
-                          f"  ({elapsed:.1f} s)")
-                except Exception as e:
-                    cert_lb[method][w.name] = None
-                    print(f"[WARN] {e}")
-            cert_time[method] = (sum(elapsed_list) / len(elapsed_list)
-                                 if elapsed_list else float("nan"))
+        cert_lb: Dict[str, Dict[str, Optional[torch.Tensor]]] = {}
+        cert_time: Dict[str, float] = {}
+        loaded_lb = False
+
+        if args.load_lb and os.path.exists(CKPT_LB):
+            print(f"\nLoading certified lower bounds from {CKPT_LB} …")
+            ck_lb = torch.load(CKPT_LB, map_location=DEVICE, weights_only=False)
+            expected_policies = [w.name for w in wrappers]
+            if (ck_lb.get("lirpa_methods") == LIRPA_METHODS
+                    and ck_lb.get("policies") == expected_policies
+                    and abs(ck_lb.get("eval_wind_max", -1) - EVAL_WIND_MAX) < 1e-9):
+                cert_lb = ck_lb["cert_lb"]
+                cert_time = ck_lb.get("cert_time", {})
+                loaded_lb = True
+                print("  loaded successfully.")
+            else:
+                print("  [WARN] checkpoint mismatch (methods, policies, or ε differ) — recomputing.")
+
+        if not loaded_lb:
+            print("\nComputing certified lower bounds (IBP / CROWN-IBP / CROWN) …")
+            for method in LIRPA_METHODS:
+                cert_lb[method] = {}
+                elapsed_list: List[float] = []
+                print(f"  [{method}]")
+                for w in wrappers:
+                    print(f"    {w.name} …", flush=True, end=" ")
+                    try:
+                        t0 = _time.perf_counter()
+                        lb = _compute_cert_lb(w.policy, pos_eval, EVAL_WIND_MAX, method)
+                        elapsed = _time.perf_counter() - t0
+                        cert_lb[method][w.name] = lb
+                        elapsed_list.append(elapsed)
+                        print(f"lb̄={float(lb.mean()):+.3f}  sat={float((lb>0).float().mean()):.1%}"
+                              f"  ({elapsed:.1f} s)")
+                    except Exception as e:
+                        cert_lb[method][w.name] = None
+                        print(f"[WARN] {e}")
+                cert_time[method] = (sum(elapsed_list) / len(elapsed_list)
+                                     if elapsed_list else float("nan"))
+
+            torch.save({
+                "lirpa_methods": LIRPA_METHODS,
+                "policies": [w.name for w in wrappers],
+                "eval_wind_max": EVAL_WIND_MAX,
+                "cert_lb": cert_lb,
+                "cert_time": cert_time,
+            }, CKPT_LB)
+            print(f"  lower-bound cache saved → {CKPT_LB}")
 
         # ── 4c. Clopper-Pearson lower bound on P(lb > 0) ─────────────────────
         CP_DELTA = 0.05
@@ -726,11 +756,11 @@ def main():
     CP_DELTA = 0.05  # used in summary table regardless of --no-cert-compare
 
     # ── 5. Plot ───────────────────────────────────────────────────────────────
-    # Layout: rows = wind conditions, cols = [Standard | RARL | Certified | Histogram]
+    # Layout: rows = wind conditions, cols = [PO | RARL | CRRL | Histogram]
     # The histogram column groups all three methods together per condition.
     CONDITIONS  = ["none",     "rand",        "adv"]
     COND_LABELS = ["No Wind",  "Random Wind", "Adversarial\n(RARL adv / PGD)"]
-    METHOD_NAMES = [w.name for w in wrappers]     # Standard, RARL, Certified
+    METHOD_NAMES = [w.name for w in wrappers]     # PO, RARL, CRRL
 
     # 3 rows × 4 cols; histogram column a bit wider
     fig, axes = plt.subplots(
@@ -759,7 +789,7 @@ def main():
             hax.set_title("Robustness ρ", fontsize=15, fontweight="bold", pad=7)
 
     fig.suptitle(
-        f"Standard vs RARL vs Certified — ε = {EVAL_WIND_MAX}  "
+        f"PO vs RARL vs CRRL — ε = {EVAL_WIND_MAX}  "
         f"({N_EVAL} episodes, same starts ≥ {EVAL_MIN_CLEARANCE} m from obstacles)",
         fontsize=16, fontweight="bold")
 
@@ -793,7 +823,7 @@ def main():
                     ax_.hist(vals, bins=SHARED_BINS, alpha=0.55,
                              color=_COLORS[w.name],
                              label=(f"{w.name}  avg_lb={vals.mean():+.3f}"
-                                    f"  sat={sat:.1%}  pL={p_L_str}"),
+                                    f"  cert sat={sat:.1%}  pL={p_L_str}"),
                              edgecolor="none")
                 ax_.axvline(0, color="k", lw=1.2, ls="--")
                 if log_scale:
@@ -838,7 +868,7 @@ def main():
     # crown_sweep[frac_idx][policy_name] = tensor (N_EVAL,) or None
     crown_sweep: List[Dict[str, Optional[torch.Tensor]]] = []
 
-    if args.load_sweep and os.path.exists(CKPT_SWEEP):
+    if (args.load_sweep or args.load_lb) and os.path.exists(CKPT_SWEEP):
         print(f"\nLoading CROWN sweep from {CKPT_SWEEP} …")
         ck_sw = torch.load(CKPT_SWEEP, map_location=DEVICE, weights_only=False)
         # Verify the checkpoint matches current fracs / eval wind
@@ -861,7 +891,7 @@ def main():
                     lb = _compute_cert_lb(w.policy, pos_eval, eps_i, "CROWN")
                     lb_at_eps[w.name] = lb
                     print(f"lb̄={float(lb.mean()):+.3f}  "
-                          f"sat={float((lb>0).float().mean()):.1%}")
+                          f"cert sat={float((lb>0).float().mean()):.1%}")
                 except Exception as e:
                     lb_at_eps[w.name] = None
                     print(f"[WARN] {e}")
@@ -900,7 +930,7 @@ def main():
                     ax4.hist(vals, bins=SWEEP_BINS, alpha=0.55,
                              color=_COLORS[w.name],
                              label=(f"{w.name}  avg_lb={vals.mean():+.3f}"
-                                    f"  sat={sat:.1%}  pL={p_L:.3f}"),
+                                    f"  cert sat={sat:.1%}  pL={p_L:.3f}"),
                              edgecolor="none")
                 ax4.axvline(0, color="k", lw=1.2, ls="--")
                 if log_scale:

@@ -62,8 +62,8 @@ import matplotlib.gridspec as gridspec
 from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 from scipy.stats import beta as _beta_dist
 
-import sensor_certified_strel as cert_mod
-import sensor_std_rarl_strel       as rarl_mod
+import certified_sensor_strel as cert_mod
+import sensor_rarl_strel       as rarl_mod
 
 # ── Tunable constants ─────────────────────────────────────────────────────────
 
@@ -73,9 +73,9 @@ N_TRAJ      = 40
 N_PGD_STEPS = 30
 PLOT_OUT    = "compare_sensor_policies.png"
 
-CKPT_AUG  = "saved_models/sensor_aug_h10_noise001_3000iters.pt"
-CKPT_RARL = "saved_models/sensor_rarl_h10_noise001_3000iters.pt"
-CKPT_CERT = "saved_models/sensor_cert_h10_noise001_3000iters.pt"
+CKPT_AUG  = "saved_models/sensor_aug_h10_noise005.pt"
+CKPT_RARL = "saved_models/sensor_rarl_h10_noise005.pt"
+CKPT_CERT = "saved_models/sensor_cert_h10_noise005.pt"
 
 COLORS = {"aug": "tab:blue", "rarl": "tab:orange", "cert": "tab:green"}
 LABELS = {"aug": "PO",       "rarl": "RARL",       "cert": "CRRL"}
@@ -606,7 +606,7 @@ def main() -> None:
     # ── CRRL lb comparison: IBP / CROWN-IBP / CROWN ──────────────────────────
     LIRPA_METHODS = ["IBP", "CROWN-IBP", "CROWN"]
     CP_DELTA      = 0.05
-    EPS_FRACS     = [1.00, 5.00, 10.00, 20.00]
+    EPS_FRACS     = [1.00, 3.00, 5.00]
     CKPT_SWEEP    = PLOT_OUT.replace(".png", "_crown_sweep.pt")
 
     _policies = [
@@ -671,11 +671,16 @@ def main() -> None:
             _all_lbv = [cert_lb[m][k].cpu().numpy()
                         for m in LIRPA_METHODS for k, *_ in _policies
                         if cert_lb[m][k] is not None]
-            _gl_min = float(min(v.min() for v in _all_lbv))
-            _gl_max = float(max(v.max() for v in _all_lbv))
-            _gl_span = max(_gl_max - _gl_min, 1e-6)
-            _gl_pad = 0.03 * _gl_span
-            SHARED_BINS = np.linspace(_gl_min - _gl_pad, _gl_max + _gl_pad, 61)
+            _all_concat = np.concatenate(_all_lbv)
+            _gl_lo = float(np.quantile(_all_concat, 0.01))
+            _gl_hi = float(np.quantile(_all_concat, 0.99))
+            if _gl_hi <= _gl_lo:
+                _gl_lo = float(_all_concat.min())
+                _gl_hi = float(_all_concat.max())
+            _gl_span = max(_gl_hi - _gl_lo, 1e-6)
+            _gl_pad = 0.05 * _gl_span
+            _gl_range = (_gl_lo - _gl_pad, _gl_hi + _gl_pad)
+            SHARED_BINS = np.linspace(_gl_range[0], _gl_range[1], 61)
 
             def _plot_cert_lb_fig(log_scale: bool):
                 fig_, axes_ = plt.subplots(3, 1, figsize=(8, 11), sharex=True)
@@ -691,9 +696,10 @@ def main() -> None:
                         ax_.hist(vals, bins=SHARED_BINS, alpha=0.55,
                                  color=COLORS[key],
                                  label=(f"{LABELS[key]}  avg_lb={vals.mean():+.3f}"
-                                        f"  sat={sat:.1%}  pL={p_L_str}"),
+                                        f"  cert sat={sat:.1%}  pL={p_L_str}"),
                                  edgecolor="none")
                     ax_.axvline(0, color="k", lw=1.2, ls="--")
+                    ax_.set_xlim(*_gl_range)
                     if log_scale:
                         ax_.set_yscale("log")
                         ax_.set_ylabel("Count (log)", fontsize=12)
@@ -757,7 +763,7 @@ def main() -> None:
                                                  "CROWN")
                     lb_at_eps[key] = lb
                     print(f"avg_lb={float(lb.mean()):+.3f}  "
-                          f"sat={float((lb>0).float().mean()):.1%}")
+                          f"cert sat={float((lb>0).float().mean()):.1%}")
                 except Exception as e:
                     lb_at_eps[key] = None
                     print(f"[WARN] {e}")
@@ -773,11 +779,16 @@ def main() -> None:
                     for i in range(len(EPS_FRACS))
                     for k, *_ in _policies
                     if crown_sweep[i][k] is not None]
-        _sw_min = float(min(v.min() for v in _sw_vals))
-        _sw_max = float(max(v.max() for v in _sw_vals))
-        _sw_span = max(_sw_max - _sw_min, 1e-6)
-        _sw_pad = 0.03 * _sw_span
-        SWEEP_BINS = np.linspace(_sw_min - _sw_pad, _sw_max + _sw_pad, 61)
+        _sw_concat = np.concatenate(_sw_vals)
+        _sw_lo = float(np.quantile(_sw_concat, 0.01))
+        _sw_hi = float(np.quantile(_sw_concat, 0.99))
+        if _sw_hi <= _sw_lo:
+            _sw_lo = float(_sw_concat.min())
+            _sw_hi = float(_sw_concat.max())
+        _sw_span = max(_sw_hi - _sw_lo, 1e-6)
+        _sw_pad = 0.05 * _sw_span
+        _sw_range = (_sw_lo - _sw_pad, _sw_hi + _sw_pad)
+        SWEEP_BINS = np.linspace(_sw_range[0], _sw_range[1], 61)
 
         for log_scale in (False, True):
             fig4, axes4 = plt.subplots(len(EPS_FRACS), 1,
@@ -796,9 +807,10 @@ def main() -> None:
                     ax4.hist(vals, bins=SWEEP_BINS, alpha=0.55,
                              color=COLORS[key],
                              label=(f"{LABELS[key]}  avg_lb={vals.mean():+.3f}"
-                                    f"  sat={sat:.1%}  pL={p_L:.3f}"),
+                                    f"  cert sat={sat:.1%}  pL={p_L:.3f}"),
                              edgecolor="none")
                 ax4.axvline(0, color="k", lw=1.2, ls="--")
+                ax4.set_xlim(*_sw_range)
                 if log_scale:
                     ax4.set_yscale("log")
                     ax4.set_ylabel("Count (log)", fontsize=12)
