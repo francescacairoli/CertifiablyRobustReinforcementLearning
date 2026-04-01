@@ -199,13 +199,13 @@ Evaluation disturbances:
 
 ### Wind = 0.2
 
-![Wind 0.2](images/compare_policies_strel_testwind02.png)
+![Wind 0.2](images/compare_wind_policies_testwind02.png)
 
 ------------------------------------------------------------------------
 
 ### Wind = 0.5
 
-![Wind 0.5](images/compare_policies_strel_testwind05.png)
+![Wind 0.5](images/compare_wind_policies_testwind05.png)
 
 Each column shows policies trained with:
 
