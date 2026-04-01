@@ -221,18 +221,18 @@ states**.
 ------------------------------------------------------------------------
 ## Numerical Results (Wind Disturbance)
 
-Method	ε = 0.025	ε = 0.05	ε = 0.075	ε = 0.1
-PO LB	+0.210	+0.123	-0.173	-0.588
-PO CertSat (%)	98.5	85.1	29.8	4.2
-PO pL (%)	97.5	82.7	27.0	3.0
-				
-RARL LB	+0.212	+0.168	+0.008	-0.483
-RARL CertSat (%)	96.4	91.8	64.5	2.3
-RARL pL (%)	95.1	89.9	61.4	1.5
-				
-CRRL LB	+0.240	+0.228	+0.187	-0.020
-CRRL CertSat (%)	99.7	98.6	95.9	67.3
-CRRL pL (%)	99.1	97.7	94.5	64.5
+| Method | Metric | ε = 0.025 | ε = 0.05 | ε = 0.075 | ε = 0.1 |
+|--------|--------|-----------|----------|-----------|---------|
+| **PO** | LB | +0.210 | +0.123 | -0.173 | -0.588 |
+| | CertSat (%) | 98.5 | 85.1 | 29.8 | 4.2 |
+| | pL (%) | 97.5 | 82.7 | 27.0 | 3.0 |
+| **RARL** | LB | +0.212 | +0.168 | +0.008 | -0.483 |
+| | CertSat (%) | 96.4 | 91.8 | 64.5 | 2.3 |
+| | pL (%) | 95.1 | 89.9 | 61.4 | 1.5 |
+| **CRRL** | LB | **+0.240** | **+0.228** | **+0.187** | **-0.020** |
+| | CertSat (%) | **99.7** | **98.6** | **95.9** | **67.3** |
+| | pL (%) | **99.1** | **97.7** | **94.5** | **64.5** |
+
 
 These results summarize certified performance under increasing wind disturbances.
 CRRL consistently achieves the largest certified robustness margins and maintains significantly higher certified satisfaction rates as disturbances increase.
@@ -310,22 +310,22 @@ Observations:
 
 ------------------------------------------------------------------------
 
-## Numerical Results (Sensor Noise)
+## Numerical Results (Sensor Noise)
 
-Method	ε = 0.02	ε = 0.04	ε = 0.06	ε = 0.08
-PO LB	+0.247	+0.234	+0.214	+0.181
-PO CertSat (%)	98.6	97.7	97.0	95.3
-PO pL (%)	97.7	96.9	95.7	93.8
-				
-RARL LB	+0.230	+0.227	+0.223	+0.216
-RARL CertSat (%)	95.4	95.4	95.3	95.3
-RARL pL (%)	93.9	93.9	93.8	93.8
-				
-CRRL LB	+0.400	+0.343	+0.305	+0.251
-CRRL CertSat (%)	95.7	95.4	94.8	92.7
-CRRL pL (%)	94.3	93.9	93.2	90.9
+| Method | Metric | ε = 0.02 | ε = 0.04 | ε = 0.06 | ε = 0.08 |
+|--------|--------|----------|----------|----------|----------|
+| **PO** | LB | +0.247 | +0.234 | +0.214 | +0.181 |
+| | CertSat (%) | 98.6 | 97.7 | 97.0 | 95.3 |
+| | pL (%) | 97.7 | 96.9 | 95.7 | 93.8 |
+| **RARL** | LB | +0.230 | +0.227 | +0.223 | +0.216 |
+| | CertSat (%) | 95.4 | 95.4 | 95.3 | 95.3 |
+| | pL (%) | 93.9 | 93.9 | 93.8 | 93.8 |
+| **CRRL** | LB | **+0.400** | **+0.343** | **+0.305** | **+0.251** |
+| | CertSat (%) | 95.7 | 95.4 | 94.8 | 92.7 |
+| | pL (%) | 94.3 | 93.9 | 93.2 | 90.9 |
 
 Under sensor noise, CRRL again achieves substantially higher certified robustness bounds, while maintaining comparable certified satisfaction rates.
+
 ------------------------------------------------------------------------
 
 ## PPO Baseline (Scalar Reward)
