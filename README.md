@@ -213,9 +213,6 @@ CRRL maintains strong robustness.
 
 ![PPO robustness](images/sensor_scalar_reward_cert.png)
 
-Although PPO achieves reasonable empirical performance, its **certified
-robustness bounds are weak**, highlighting the importance of
-**STREL-aligned training objectives**.
 ------------------------------------------------------------------------
 
 # Sensor Noise Results
