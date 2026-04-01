@@ -77,7 +77,7 @@ parameters are updated via **gradient descent**.
 
 Training uses two verification methods:
 
-#### Phase 1 --- IBP (first 90% of training)
+#### Phase 1 --- CROWN-IBP (first 90% of training)
 
 -   fast
 -   coarse bounds
