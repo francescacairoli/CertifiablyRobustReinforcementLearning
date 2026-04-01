@@ -21,7 +21,6 @@ is satisfied for all disturbances within a prescribed uncertainty set.
 
 CRRL integrates learning and verification by optimizing a **certified
 robustness objective** rather than a standard reward.
-
 The approach trains a neural policy while **propagating verification
 bounds through the full trajectory computation graph**.
 
