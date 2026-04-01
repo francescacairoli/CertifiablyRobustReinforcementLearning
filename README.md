@@ -125,10 +125,10 @@ The following pseudocode summarizes the training procedure used for
     4.     λ ← k / (K − 1)
     5.     ε ← ε_max · λ
 
-    6.     Sample {o₀⁽ⁱ⁾}ᵢ₌₁ᴮ from valid start region
+    6.     Sample {y₀⁽ⁱ⁾}ᵢ₌₁ᴮ from valid start region
 
-    7.     lb⁽ⁱ⁾ ← r̂θ(o₀⁽ⁱ⁾, ε)        // certified lower bound
-    8.     ρ_nom⁽ⁱ⁾ ← rθ(o₀⁽ⁱ⁾, 0)
+    7.     lb⁽ⁱ⁾ ← r̂θ(y₀⁽ⁱ⁾, ε)        // certified lower bound
+    8.     ρ_nom⁽ⁱ⁾ ← rθ(y₀⁽ⁱ⁾, 0)
 
     9.     Compute mixed robustness m⁽ⁱ⁾
 
