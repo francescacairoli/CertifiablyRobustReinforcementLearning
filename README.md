@@ -300,7 +300,7 @@ levels**, while baselines degrade faster.
 ![Sensor trajectories](images/compare_sensor_policies.png)
 
 Columns correspond to PO, RARL, and CRRL policies under **sensor noise ε
-= 0.01**.
+= 0.04**.
 
 Observations:
 
