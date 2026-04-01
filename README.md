@@ -133,7 +133,7 @@ Metrics include:
 
 ## Certified Robustness vs Disturbance
 
-![Certified robustness wind](images/compare_policies_crown_sweep.png)
+![Certified robustness wind](images/compare_wind_policies_crown_sweep.png)
 
 This plot shows the **certified robustness lower bounds** for policies
 trained with PO, RARL, and CRRL as the wind disturbance magnitude
@@ -152,7 +152,7 @@ increasing disturbance levels.
 
 ## Trajectory Comparison
 
-![Wind trajectories](images/compare_policies.png)
+![Wind trajectories](images/compare_wind_policies.png)
 
 Columns correspond to policies trained with:
 
@@ -208,6 +208,14 @@ CRRL instead:
 Even under disturbances **10× larger than those used during training**,
 CRRL maintains strong robustness.
 
+------------------------------------------------------------------------
+## PPO Baseline (Scalar Reward)
+
+![PPO robustness](images/sensor_scalar_reward_cert.png)
+
+Although PPO achieves reasonable empirical performance, its **certified
+robustness bounds are weak**, highlighting the importance of
+**STREL-aligned training objectives**.
 ------------------------------------------------------------------------
 
 # Sensor Noise Results
