@@ -24,6 +24,8 @@ robustness objective** rather than a standard reward.
 The approach trains a neural policy while **propagating verification
 bounds through the full trajectory computation graph**.
 
+![CRRL Pipeline](images/crrl_pipeline.png)
+
 ------------------------------------------------------------------------
 
 # Certified Policy Optimization
